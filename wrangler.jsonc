@@ -1,0 +1,63 @@
+/**
+ * stoop — Cloudflare Worker configuration.
+ *
+ * Deploying:
+ *   - The Deploy to Cloudflare button (README) reads this file, creates the KV
+ *     namespace and the Durable Object, and asks for the secrets in `.dev.vars.example`.
+ *   - Or `npm run deploy`: `OAUTH_KV` has no `id` on purpose, so wrangler creates the
+ *     namespace on the first deploy and writes its id back. Then set the secrets in
+ *     `.dev.vars.example` with `npx wrangler secret put <NAME>`.
+ *   - Per-deployment changes (a custom domain via `routes` + `PUBLIC_BASE_URL`, tuned
+ *     limits, an existing namespace id) go in a copy named `wrangler.local.jsonc`
+ *     (gitignored). Every `npm run` script prefers it when it exists.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stoop",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  /**
+   * One SQLite Durable Object holds the state: API keys (hashed), the audit log,
+   * the daily upstream request counter and the response cache.
+   */
+  "durable_objects": {
+    "bindings": [{ "name": "STORE", "class_name": "StoopStore" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["StoopStore"] }],
+
+  /** Required by @cloudflare/workers-oauth-provider to store clients, grants and tokens. */
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+
+  /** Daily maintenance: prune audit rows past 90 days, expired cache rows, old counters. */
+  "triggers": {
+    "crons": ["23 6 * * *"]
+  },
+
+  /**
+   * Plain (non-secret) configuration. Everything is a string; src/env.ts parses it.
+   */
+  "vars": {
+    /**
+     * How StreetEasy is reached. StreetEasy blocks datacenter IPs, so a deployed
+     * Worker needs one of: "zyte" | "brightdata" | "relay". "direct" only works
+     * from a residential connection (e.g. `wrangler dev` at home).
+     */
+    "UPSTREAM_PROVIDER": "zyte",
+    /** Paid upstream attempts allowed per UTC day, retries included. "unlimited" = no cap. */
+    "MAX_UPSTREAM_REQUESTS_PER_DAY": "300",
+    /** Retries after a bot-challenge response (403 or a challenge page). */
+    "UPSTREAM_MAX_RETRIES": "2",
+    /** Most StreetEasy result pages one location search may scan. */
+    "MAX_PAGES_PER_SEARCH": "3",
+    /** Bright Data Web Unlocker zone name (only for UPSTREAM_PROVIDER=brightdata). */
+    "BRIGHTDATA_ZONE": "web_unlocker1",
+    /** Optional absolute base URL for OAuth metadata, e.g. "https://stoop.example.com". */
+    "PUBLIC_BASE_URL": ""
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

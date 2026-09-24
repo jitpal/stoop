@@ -1,0 +1,67 @@
+{
+  "name": "stoop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unofficial NYC apartment search for AI agents: a Cloudflare Worker exposing an MCP server for rental search by neighborhood, subway stop or any place, plus public building records.",
+  "license": "MIT",
+  "keywords": [
+    "nyc",
+    "apartments",
+    "rentals",
+    "streeteasy",
+    "mcp",
+    "mcp-server",
+    "cloudflare-workers",
+    "ai-agents"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node scripts/wrangler.mjs dev",
+    "deploy": "node scripts/wrangler.mjs deploy",
+    "types": "node scripts/wrangler.mjs types",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "data:stations": "node scripts/build-stations.mjs",
+    "data:areas": "node scripts/build-areas.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "check-datasets": "node scripts/check-datasets.mjs",
+    "relay": "node scripts/relay.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.10.3",
+    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/server": "2.0.0",
+    "agents": "^0.23.0",
+    "hono": "^4.13.7",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.13",
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20260911.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.131.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "ADMIN_PASSWORD": {
+        "description": "Your sign-in for `/admin`, where you mint API keys and read the audit log, and for approving OAuth clients. Use a long random passphrase."
+      },
+      "COOKIE_SIGNING_KEY": {
+        "description": "Signs the admin session cookie. 32 random bytes as hex: run `openssl rand -hex 32`."
+      },
+      "ZYTE_API_KEY": {
+        "description": "StreetEasy blocks datacenter IPs, so searches go through [Zyte](https://www.zyte.com/). Paste your Zyte API key. Other providers are in the README."
+      }
+    }
+  }
+}
